@@ -1,0 +1,139 @@
+// ==UserScript==
+// @name        Jenkins colored console - rplevka
+// @namespace   http://www.coffeegnome.net/
+// @description Parses the build log output
+// @include     https://satellite-jenkins.rhev-ci-vms.eng.rdu2.redhat.com/*/console*
+// @include     https://satellite-jenkins.rhev-ci-vms.eng.rdu2.redhat.com/*/testReport*
+// @require     https://raw.githubusercontent.com/beautify-web/js-beautify/master/js/lib/beautify.js
+// @version     2
+// @grant       none
+// ==/UserScript==
+
+//    ".console-important:hover { background-color: #dde }" +
+// @require     https://code.jquery.com/jquery-2.2.4.js
+addGlobalStyle(
+    "div[class^='console-']:hover { background-color: #dde }" +
+    ".console-minor { color: #666 }" +
+    ".console-normal { color: #000 }" +
+    ".json { color: black}" +
+    ".console-important { color: #08C; border-bottom: 1px dotted #777}" +
+    ".console-warning { color: #550; background: #ffc }" +
+    ".console-success { color: #080; background: #efe }" +
+    ".console-error { color: #F00; background: #fee }"
+);
+
+var timer = setInterval(parse_console_blocks, 200);
+
+var foundBlocksTimeout = 10;
+
+var patterns = [
+    { normal: /^_+\s*[\D\d]+_+/ },
+    { normal: /^\s*[\D\d]+&gt;/ },
+    
+    { json: / response/ },
+
+    { warning: /\d WARNING/ },
+    { warning: /^Finished: UNSTABLE/ },
+    
+    { error: /FAILED/ },
+    { error: /^E       / },
+    { error: /ERROR/ },
+    
+    { important: /^Build started/ },
+    { important: /DEBUG/ },
+    
+    { success: /PASSED/ },
+    { warning: /SKIPPED/ },
+    { warning: /^Finished: SUCCESS/ }
+    
+];
+
+function parse_console_blocks() {
+    var consoleBlocks = $$("pre.console-output:not(.parsed), #out pre:not(.parsed)");
+    
+    var foundBlocks = consoleBlocks.length > 0;
+    if(foundBlocks) {
+        foundBlocksTimeout = 10;
+    } else if(--foundBlocksTimeout <= 0) {
+        //clearInterval(timer);
+    }
+    
+    consoleBlocks.forEach(parse_console_block);
+    
+    function parse_console_block(block) {
+        //console.log("Processing text block", block);
+        Element.addClassName(block, "parsed");
+        
+        var lines = [];
+        var lines1 = block.innerHTML.split("\n");
+        var lines2 = [];
+        
+        for(i in lines1){
+            lines_tmp = lines1[i].split("\\n")
+            for(j in lines_tmp){
+                lines.push(lines_tmp[j]);
+            }
+        }
+        var html = [];
+        var currentLine = 0;
+        parse_block_chunk();
+
+        function parse_block_chunk() {
+            for(var i = 0; i < 20; ++i, ++currentLine) {
+            //for(var i in lines) {
+                if(currentLine >= lines.length) {
+                    block.innerHTML = html.join("");
+                    return;
+                }
+
+                var line = lines[currentLine];
+                //var line = lines[i];
+                var cssClass = select_class(line);
+
+                var indentMatch = /^(\s*)(.*)/.exec(line);
+                
+                // for pretty printing of the dictionaries
+                
+                if(cssClass == 'json'){
+                    line2 = line.replace(/({[^$]*})/g, function(a, b){return '\</br>'+js_beautify(b)+'</br>'});
+                    line = line2;
+                    indentMatch[2] = line;
+                    cssClass = 'important';
+                }
+                html.push(
+                    "<div class='console-" +
+                    cssClass +
+                    "' style='padding-left: " +
+                    indentMatch[1].length +
+                    "ex'>" +
+                    indentMatch[2] +
+                    "</div>");
+            }
+            
+            setTimeout(parse_block_chunk, 0);
+        }
+    }
+
+    function select_class(line) {
+        //for(var i = 0; i < patterns.length; ++i) {
+        for (var i in patterns) {
+            for(var type in patterns[i]) {
+                var pattern = patterns[i][type];
+                if(pattern.test(line)) {
+                    return type;
+                }
+            }
+        }
+        return "minor";
+    }
+}
+
+
+function addGlobalStyle(css) {
+    var head = document.getElementsByTagName('head')[0];
+    if (!head) { return; }
+    var style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = css;
+    head.appendChild(style);
+}
