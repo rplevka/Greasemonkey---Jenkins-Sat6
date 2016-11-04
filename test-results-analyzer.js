@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name        jenkins_test_results_analyzer_redesign
-// @namespace   jenkins-ci
+// @namespace   wiki.test.redhat.com
 // @include     https://*jenkins*.redhat.com/*/test_results_analyzer/
 // @version     1.1
 // @grant       none
-// @updateurl   https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/test-results-analyzer.js
-// @downloadurl https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/test-results-analyzer.js
+// @updateurl   https://wiki.test.redhat.com/BaseOs/Projects/GreaseMonkey?action=AttachFile&do=view&target=jenkins-test_result_analyzer-redesign.js
+// @downloadurl https://wiki.test.redhat.com/BaseOs/Projects/GreaseMonkey?action=AttachFile&do=view&target=jenkins-test_result_analyzer-redesign.js
 // @author      roman plevka (rplevka@redhat.com)
 // ==/UserScript==
 
@@ -31,7 +31,7 @@ var observeDOM = (function(){
             obj.addEventListener('DOMNodeInserted', callback, false);
             obj.addEventListener('DOMNodeRemoved', callback, false);
         }
-    }
+    };
 })();
 
 
@@ -113,7 +113,7 @@ var decorate = function() {
     height: 13px;
     content:"";
   }
-`
+`;
 
   // attach custom CSS styles
   styles[0].innerHTML += style;
@@ -135,17 +135,18 @@ var decorate = function() {
                   // TBD: we might mitigate this by utilizing jenkins XML api which accepts xpath-like filtering, which happens on the server.
                   function(buildinfo){
                       build.cases = [];
-                      for(c of buildinfo.suites[0].cases){
+                      for(var c of buildinfo.suites[0].cases){
                           if(c.status != "PASSED" && c.status != "SKIPPED"){
                               build.cases.push(c);
                           }
                       }
                   }
-              )
+              );
           }
       }
   );
   console.log('decorating rows...');
+  /*
   var rows = document.getElementsByClassName('table-row');
   for(var i of rows){
       if(i.getAttribute('parentclass')!='base'){
@@ -161,15 +162,15 @@ var decorate = function() {
                   var dataResult = JSON.parse(j.getAttribute('data-result'));
                   for(var b of builds){
                       if(b.id == dataResult.buildNumber){
-                          for(c of b.cases){
+                          for(var c of b.cases){
                               var pclass = j.parentElement.getAttribute('parentclass').replace(/^base-/g, "").replace(/[_-]/g,".");
                               var cclass = c.className.replace(/[_-]/g,".");
                               if(cclass == pclass && c.name == j.parentElement.getAttribute('name')){
                                   if(c.testActions.length > 0){
-                                      if(c.testActions[0].claimed == true){
+                                      if(c.testActions[0].claimed === true){
                                           j.className += ' claimed';
                                           var ghUrl = c.testActions[0].reason;
-                                          if(ghUrl != null)
+                                          if(ghUrl !== null)
                                              j.innerHTML +='<a href="'+ghUrl+'" target="_blank"><div class="gh"></div></a>';
                                       }
                                   }
@@ -184,8 +185,24 @@ var decorate = function() {
         else{
             i.className += ' child0';
         }
-    };
-
+    }
+*/
+  var baseRows = document.querySelectorAll('.table-row[parentclass="base"]');
+  for (var baseRow of baseRows){
+      for(var i of baseRow.classList){if(i.indexOf('base-')!=-1){baseRow.cls=i;break;}}
+      baseRow.className += ' child0';
+      //now for the child1 elements:
+      var child1Rows = document.querySelectorAll('.table-row[parentclass="'+baseRow.cls+'"]');
+      for(var child1Row of child1Rows){
+          for(var j of baseRow.classList){if(j.indexOf('base-')!=-1){child1Row.cls=j;break;}}
+          child1Row.className += ' child1';
+          //and for the child2 elements:
+          var child2Rows = document.querySelectorAll('.table-row[parentclass="'+child1Row.cls+'"]');
+          for(var child2Row of child2Rows){
+              child2Row.className += ' child2';
+          }
+      }
+  }
   console.log('greasemonkey script loaded');
 };
 
