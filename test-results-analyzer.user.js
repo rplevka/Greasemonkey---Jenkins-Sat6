@@ -2,7 +2,7 @@
 // @name        jenkins_test_results_analyzer_redesign
 // @namespace   jenkins-ci
 // @include     https://*jenkins*.redhat.com/*/test_results_analyzer/
-// @version     1.2.1
+// @version     1.2.2
 // @grant       none
 // @updateurl   https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/master/test-results-analyzer.meta.js
 // @downloadurl https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/master/test-results-analyzer.user.js
@@ -41,22 +41,22 @@ var decorate = function() {
 
   var style = `
   .failed{
-    background-color: #d9534f;
+    background-color: #d9534f !important;
     color: #fff;
     border-radius: .25em;
   }
   .passed{
-    background-color: #5cb85c;
+    background-color: #5cb85c !important;
     color: #fff;
     border-radius: .25em;
   }
   .skipped{
-    background-color: #f0ad4e;
+    background-color: #f0ad4e !important;
     color: #fff;
     border-radius: .25em;
   }
   .no_status{
-    background-color: #aaa;
+    background-color: #aaa !important;
     color: #fff;
     border-radius: .25em;
   }
@@ -77,6 +77,51 @@ var decorate = function() {
     text-transform: lowercase;
     color: #fff;
   }
+
+  .statusWrapper{
+    display: table;
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    border-collapse: collapse;
+   }
+
+  .statusPass{
+    display: table-cell;
+    height: 100%;
+    width: 0.1%;
+    background: #5cb85c;
+   }
+
+  .statusSkip{
+    display: table-cell;
+    width: 0.1%;
+    background: #eab451;
+  }
+
+  .statusFail{
+    /*display: table-cell;*/
+    background: #d9534f;
+    height: 100%;
+    width: auto;
+   }
+
+  .statusClaim{
+    background: #2482b1;
+    height: 0%;
+   }
+
+  .statusText{
+    position: absolute;
+    display:  block;
+    text-align: center;
+    width: 100%;
+    top: 50%;
+    margin-left:  auto;
+    margin-right: auto;
+    line-height: 50%;
+  }
+
   .child0{
     background-color: #eaeaea;
   }
@@ -171,12 +216,18 @@ var decorate = function() {
       background-color: #c02942;
       color: white;
   }
+  .modal-claim {
+      overflow: scroll;
+      max-height: 80%;
+}
   .modal-body {
       padding: 2px 16px;
       overflow: scroll;
       max-height: 80%;
       background-color: #000;
       color: #fefefe;
+      float: left;
+      width: 75%;
   }
   .modal-footer {
       padding: 2px 16px;
@@ -238,6 +289,10 @@ var decorate = function() {
           if(i.getAttribute('parentname').startsWith('tests.')){
               i.className += ' child1';
               i.getElementsByClassName('children table-cell')[0].className += ' child1';
+              var ch1_fails = i.getElementsByClassName('table-cell build-result failed');
+              for(var ch1_fail of ch1_fails){
+                decorate_parent_cell(ch1_fail);
+              }
           }
           else{
               i.className += ' child2';
@@ -283,11 +338,72 @@ var decorate = function() {
         }
         else{
             i.className += ' child0';
+            var ch0_fails = i.getElementsByClassName('table-cell build-result failed');
+            for(var ch0_fail of ch0_fails){
+                decorate_parent_cell(ch0_fail);
+            }
         }
     }
   handleModal();
   console.log('greasemonkey script loaded');
 };
+
+function decorate_child_cell(el){}
+function decorate_parent_cell(el){
+    el.style.position = 'relative';
+    el.style.verticalAlign = 'middle';
+    el.style.height = '100%';
+    el.style.padding = '0';
+    var el_a = el.getElementsByTagName('a')[0];
+    el_a.parentElement.removeChild(el_a);
+    //el append status wrapper etc.
+    var wrapper = document.createElement('div');
+    var statusPass = document.createElement('div');
+    var statusSkip = document.createElement('div');
+    var statusFail = document.createElement('div');
+    var statusClaim = document.createElement('div');
+    var statusText = document.createElement('div');
+    var statusTextFail = document.createElement('span');
+    var statusTextTotal = document.createElement('span');
+
+    wrapper.className = 'statusWrapper';
+    statusPass.className = 'statusPass';
+    statusSkip.className = 'statusSkip';
+    statusFail.className = 'statusFail';
+    statusClaim.className = 'statusClaim';
+    statusText.className = 'statusText';
+    statusFail.appendChild(statusClaim);
+    /*statusText.appendChild(statusTextFail);
+               statusText.appendChild(statusTextTotal);*/
+    wrapper.appendChild(statusPass);
+    wrapper.appendChild(statusSkip);
+    wrapper.appendChild(statusFail);
+    el.appendChild(wrapper);
+    el.appendChild(statusText);
+    // load the cell data
+    var el_data = JSON.parse(el.getAttribute('data-result'));
+    statusPass.style.width = (el_data.totalPassed/el_data.totalTests)*100+0.1 + '%';
+    statusSkip.style.width = (el_data.totalSkipped/el_data.totalTests)*100+0.1 + '%';
+    statusText.innerHTML = el_data.totalFailed+"/"+el_data.totalTests;
+    //console.log(el_data.totalTests);
+}
+
+function claimTest(assignee, reason, sticky) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+      if (this.readyState == 4){
+          console.log('status: '+this.status);
+      }
+  };
+  xhttp.open("POST", "https://<satellite_url>/<job>/<build>/testReport/<test>/claim/claim", true);
+  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhttp.send(`json={"assignee":"", "${reason}": "ajax", "sticky":${sticky}}`);
+
+  xhttp.onreadystatechange = function () {
+      if (this.readyState == 4){
+          console.log('status: '+this.status);
+      }};
+}
 
 function handleModal() {
   var modal_el = document.createElement('div');
@@ -300,6 +416,66 @@ function handleModal() {
       <h2>Modal Header</h2>
     </div>
     <div class="modal-body">
+    </div>
+    <div class="modal-claim">
+<table style="margin-top: 1em; margin-left:0em;">
+    <script type="text/javascript">
+        function Display(error)
+        {
+            reasonText = document.getElementById("errordesc");
+            obj = {};
+            if(error == "Default"){
+                reasonText.textContent = "";
+            } else{
+                reasonText.textContent = obj[error];
+            }
+            reasonText.readOnly = true;
+        }
+    </script><tr><td><img src="/static/5dc824d6/plugin/claim/icons/claim-48x48.png" alt="" style="width: 24px; height: 24px; margin-right:1em;" /></td><td style="vertical-align:middle">
+                This test was not claimed.
+                <div id="claimHoverPopup">
+                    <form method="post" id="claimForm" name="claim" action="claim/claim">
+                        <table>
+                           <tr>
+                              <td class="setting-leftspace"></td>
+                              <td class="setting-name">Assignee</td>
+                              <td class="setting-main">
+                                  <script src='/adjuncts/5dc824d6/lib/form/select/select.js' type='text/javascript'></script>
+                                  <select fillUrl="/view/Satellite6.2/job/automation-6.2-tier3-rhel6/38/descriptorByName/hudson.plugins.claim.DescribableTestAction/fillAssigneeItems" name="_.assignee" class="setting-input  select " value=""></select>
+                              </td>
+                            </tr>
+                            <tr class="validation-error-area">
+                              <td colspan="2"></td><td></td><td></td>
+                            </tr>
+                            <tr class="help-area">
+                              <td></td><td colspan="2">
+                                <div class="help">Loading...
+                                </div>
+                              </td>
+                              <td></td>
+                            </tr>
+                            <tr>
+                              <td class="setting-leftspace">
+                              </td>
+                              <td class="setting-name">Reason</td>
+                              <td class="setting-main">
+                                <textarea name="reason" id="reason" rows="5" class="setting-input">
+                                </textarea><div class="textarea-handle"></div></td>
+                             </tr>
+                             <tr class="validation-error-area">
+                               <td colspan="2"></td><td></td><td></td>
+                             </tr>
+                             <tr><td class="setting-leftspace"> </td><td class="setting-name">Sticky</td><td class="setting-main"><input name="sticky" checked="true" type="checkbox" class=" " /></td><td class="setting-help"><a helpURL="/plugin/claim/help-sticky.html" href="#" class="help-button"><img src="/static/5dc824d6/images/16x16/help.png" alt="Help for feature: Sticky" style="width: 16px; height: 16px; " class="icon-help icon-sm" /></a></td></tr>
+                             <tr class="validation-error-area"><td colspan="2"></td><td></td><td></td></tr>
+                             <tr><td colspan="4"><div align="right">
+                               <input name="Submit" type="button" value="Claim" class="submit-button primary" onClick="claimTest()"/></div></td>
+                             </tr>
+                           </table>
+                         </form>
+                       </div>
+                     </td>
+                   </tr>
+                 </table>
     </div>
   </div>`;
 
@@ -329,6 +505,8 @@ function handleModal() {
           //modal.getElementsByClassName('modal-header')[0].innerText = data.name;
           modal.querySelector('.modal-header h2').innerText = data.name + " build: " + data.buildNumber;
           modal.getElementsByClassName('modal-body')[0].innerText = data.failureMessage;
+          //data.url to modal.claim
+          modal.querySelector('#claimForm').setAttribute('url',data.url+'/claim/claim');
       };
   }
   // When the user clicks on <span> (x), close the modal
