@@ -4,8 +4,8 @@
 // @include     https://*jenkins*.redhat.com/*/test_results_analyzer/
 // @version     1.1
 // @grant       none
-// @updateurl   https://wiki.test.redhat.com/BaseOs/Projects/GreaseMonkey?action=AttachFile&do=view&target=jenkins-test_result_analyzer-redesign.js
-// @downloadurl https://wiki.test.redhat.com/BaseOs/Projects/GreaseMonkey?action=AttachFile&do=view&target=jenkins-test_result_analyzer-redesign.js
+// @updateurl   https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/rework/test-results-analyzer.js
+// @downloadurl https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/rework/test-results-analyzer.js
 // @author      roman plevka (rplevka@redhat.com)
 // ==/UserScript==
 
@@ -146,32 +146,51 @@ var decorate = function() {
       }
   );
   console.log('decorating rows...');
-  /*
-  var rows = document.getElementsByClassName('table-row');
-  for(var i of rows){
-      if(i.getAttribute('parentclass')!='base'){
-          if(i.getAttribute('parentname').startsWith('tests.')){
-              i.className += ' child1';
-              i.getElementsByClassName('children table-cell')[0].className += ' child1';
+
+  var table = document.getElementsByClassName('table')[0];
+  var baseRows = table.querySelectorAll('.table-row[parentclass="base"]');
+  for (var baseRow of baseRows){
+      var child1Rows = table.querySelectorAll('.table-row[parentclass="'+baseRow.className.match(/base-[^ ]*/)[0]+'"]');
+      baseRow.addClassName('child0');
+      //get fails/totals for the failed builds
+      var failedBuilds = baseRow.querySelectorAll('.build-result.failed');
+      for(var fb of failedBuilds){
+          var failcount = JSON.parse(fb.getAttribute('data-result')).totalFailed;
+          var totalcount = JSON.parse(fb.getAttribute('data-result')).totalTests;
+          fb.insertAdjacentText('afterBegin', failcount+'/'+totalcount+' ');
+      }
+
+      //now for the child1 elements:
+      for(var child1Row of child1Rows){
+          var child2Rows = table.querySelectorAll('.table-row[parentclass="'+child1Row.className.match(/base-[^ ]*/)[0]+'"]');
+          child1Row.addClassName('child1');
+          //get fails/totals for the failed builds
+          var failedBuilds = child1Row.querySelectorAll('.build-result.failed');
+          for(var fb of failedBuilds){
+              var failcount = JSON.parse(fb.getAttribute('data-result')).totalFailed;
+              var totalcount = JSON.parse(fb.getAttribute('data-result')).totalTests;
+              fb.insertAdjacentText('afterBegin', failcount+'/'+totalcount+' ');
           }
-          else{
-              i.className += ' child2';
-              var fails = i.getElementsByClassName('table-cell build-result failed');
-              for(var j of fails){
-                  j.className += ' test_fail';
-                  var dataResult = JSON.parse(j.getAttribute('data-result'));
+
+          //and for the child2 elements:
+          for(var child2Row of child2Rows){
+              child2Row.addClassName('child2');
+              var fails = child2Row.getElementsByClassName('failed');
+              for(var f of fails){
+                  f.className += ' test_fail';
+                  var dataResult = JSON.parse(f.getAttribute('data-result'));
                   for(var b of builds){
                       if(b.id == dataResult.buildNumber){
                           for(var c of b.cases){
-                              var pclass = j.parentElement.getAttribute('parentclass').replace(/^base-/g, "").replace(/[_-]/g,".");
+                              var pclass = f.parentElement.getAttribute('parentclass').replace(/^base-/g, "").replace(/[_-]/g,".");
                               var cclass = c.className.replace(/[_-]/g,".");
-                              if(cclass == pclass && c.name == j.parentElement.getAttribute('name')){
+                              if(cclass == pclass && c.name == f.parentElement.getAttribute('name')){
                                   if(c.testActions.length > 0){
                                       if(c.testActions[0].claimed === true){
-                                          j.className += ' claimed';
+                                          f.className += ' claimed';
                                           var ghUrl = c.testActions[0].reason;
                                           if(ghUrl !== null)
-                                             j.innerHTML +='<a href="'+ghUrl+'" target="_blank"><div class="gh"></div></a>';
+                                             f.innerHTML +='<a href="'+ghUrl+'" target="_blank"><div class="gh"></div></a>';
                                       }
                                   }
                               }
@@ -180,26 +199,6 @@ var decorate = function() {
                       }
                   }
               }
-            }
-        }
-        else{
-            i.className += ' child0';
-        }
-    }
-*/
-  var baseRows = document.querySelectorAll('.table-row[parentclass="base"]');
-  for (var baseRow of baseRows){
-      for(var i of baseRow.classList){if(i.indexOf('base-')!=-1){baseRow.cls=i;break;}}
-      baseRow.className += ' child0';
-      //now for the child1 elements:
-      var child1Rows = document.querySelectorAll('.table-row[parentclass="'+baseRow.cls+'"]');
-      for(var child1Row of child1Rows){
-          for(var j of baseRow.classList){if(j.indexOf('base-')!=-1){child1Row.cls=j;break;}}
-          child1Row.className += ' child1';
-          //and for the child2 elements:
-          var child2Rows = document.querySelectorAll('.table-row[parentclass="'+child1Row.cls+'"]');
-          for(var child2Row of child2Rows){
-              child2Row.className += ' child2';
           }
       }
   }
