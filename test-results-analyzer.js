@@ -113,7 +113,93 @@ var decorate = function() {
     height: 13px;
     content:"";
   }
-`;
+
+  /* MODAL STYLES */
+  .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 25; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        -webkit-animation-name: fadeIn; /* Fade in the background */
+        -webkit-animation-duration: 0.4s;
+        animation-name: fadeIn;
+        animation-duration: 0.4s
+    }
+
+    /* Modal Content */
+    .modal-content {
+        position: fixed;
+        bottom: 0;
+        background-color: #fefefe;
+        width: 100%;
+        height: 40vh;
+        -webkit-animation-name: slideIn;
+        -webkit-animation-duration: 0.4s;
+        animation-name: slideIn;
+        animation-duration: 0.4s;
+    }
+
+    /* The Close Button */
+    .close {
+        color: white;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .modal-header {
+        padding: 2px 16px;
+        background-color: #c02942;
+        color: white;
+    }
+
+    .modal-body {
+        padding: 2px 16px;
+        overflow: scroll;
+        max-height: 80%;
+        background-color: #000;
+        color: #fefefe;
+    }
+
+    .modal-footer {
+        padding: 2px 16px;
+        background-color: #c02942;
+        color: white;
+    }
+
+    /* Add Animation */
+    @-webkit-keyframes slideIn {
+        from {bottom: -300px; opacity: 0}
+        to {bottom: 0; opacity: 1}
+    }
+
+    @keyframes slideIn {
+        from {bottom: -300px; opacity: 0}
+        to {bottom: 0; opacity: 1}
+    }
+
+    @-webkit-keyframes fadeIn {
+        from {opacity: 0}
+        to {opacity: 1}
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0}
+        to {opacity: 1}
+    }`;
 
   // attach custom CSS styles
   styles[0].innerHTML += style;
@@ -198,12 +284,63 @@ var decorate = function() {
                           break;
                       }
                   }
+                  // attach the modal button
+                  f.innerHTML +='<div class="modal_info">i</div>';
               }
           }
       }
   }
+  handleModal();
   console.log('greasemonkey script loaded');
 };
+
+function handleModal() {
+  var modal_el = document.createElement('div');
+  modal_el.id='testModal';
+  modal_el.classList.add('modal');
+  modal_el.innerHTML += `
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="close">&times</span>
+      <h2>Modal Header</h2>
+    </div>
+    <div class="modal-body">
+    </div>
+  </div>`;
+
+  var tree = document.getElementById('tree');
+  tree.appendChild(modal_el);
+  // Get the modal
+  var modal = document.getElementById('testModal');
+  // Get the button that opens the modal
+  var btns = document.getElementsByClassName("modal_info");
+  // Get the <span> element that closes the modal
+  var span = document.getElementsByClassName("close")[0];
+  // When the user clicks the button, open the modal
+  for (var btn of btns){
+      btn.onclick = function(i) {
+          //code for handling the test info
+          //console.log(i);
+          modal.style.display = "block";
+          var data = JSON.parse(i.path[1].dataset.result);
+          console.log(data);
+          //modal.getElementsByClassName('modal-header')[0].innerText = data.name;
+          modal.querySelector('.modal-header h2').innerText = data.name + " build: " + data.buildNumber;
+          modal.getElementsByClassName('modal-body')[0].innerText = data.failureMessage;
+      };
+  }
+  // When the user clicks on <span> (x), close the modal
+  span.onclick = function() {
+    modal.style.display = "none";
+  };
+  // When the user clicks anywhere outside of the modal, close it
+  window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+  };
+  console.log('handleModal() initialized');
+}
 
 
 function httpGet(url, callback) {
