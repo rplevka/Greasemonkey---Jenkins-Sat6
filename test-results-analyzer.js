@@ -2,7 +2,7 @@
 // @name        jenkins_test_results_analyzer_redesign
 // @namespace   jenkins-ci
 // @include     https://*jenkins*.redhat.com/*/test_results_analyzer/
-// @version     1.1_devel
+// @version     1.2
 // @grant       none
 // @author      roman plevka (rplevka@redhat.com)
 // ==/UserScript==
@@ -107,7 +107,7 @@ var decorate = function() {
     background-position: bottom right;
     display: inline-block;
 
-    width: 100%;
+    width: 13px;
     height: 13px;
     content:"";
   }
@@ -129,6 +129,22 @@ var decorate = function() {
       -webkit-animation-duration: 0.4s;
       animation-name: fadeIn;
       animation-duration: 0.4s
+  }
+
+  .modal_info{
+      visibility: hidden;
+  }
+
+  .modal_info::after{
+    background-image: url("http://www.iconsdb.com/icons/preview/black/info-2-xxl.png");
+    background-size: 13px 13px;
+    background-repeat: no-repeat;
+    background-position: bottom right;
+    display: inline-block;
+
+    width: 13px;
+    height: 13px;
+    content:"";
   }
 
   /* Modal Content */
@@ -243,10 +259,24 @@ var decorate = function() {
               var fails = i.getElementsByClassName('table-cell build-result failed');
               for(var j of fails){
                   j.className += ' test_fail';
+                  j.innerHTML += '<div class="icon_container"></div>';
+                  cont = j.getElementsByClassName("icon_container")[0];
+                  j.onmouseenter = function(el){
+                      console.log(el.srcElement.tagName);
+                      if(el.srcElement.tagName == "DIV" || el.srcElement.tagName == "SPAN"){
+                          el.srcElement.getElementsByClassName("modal_info")[0].style.visibility = "visible";
+                      }
+                  };
+                  j.onmouseleave = function(el){
+                      console.log(el.srcElement);
+                      if(el.srcElement.tagName == "DIV" || el.srcElement.tagName == "SPAN"){
+                          el.srcElement.getElementsByClassName("modal_info")[0].style.visibility = "hidden";
+                      }
+                  };
                   var dataResult = JSON.parse(j.getAttribute('data-result'));
                   for(var b of builds){
                       if(b.id == dataResult.buildNumber){
-                          for(c of b.cases){
+                          for(var c of b.cases){
                               var pclass = j.parentElement.getAttribute('parentclass').replace(/^base-/g, "").replace(/[_-]/g,".");
                               var cclass = c.className.replace(/[_-]/g,".");
                               if(cclass == pclass && c.name == j.parentElement.getAttribute('name')){
@@ -255,7 +285,7 @@ var decorate = function() {
                                           j.className += ' claimed';
                                           var ghUrl = c.testActions[0].reason;
                                           if(ghUrl !== null)
-                                             j.innerHTML +='<a href="'+ghUrl+'" target="_blank"><div class="gh"></div></a>';
+                                             cont.innerHTML +='<a href="'+ghUrl+'" target="_blank"><span class="gh"></span></a>';
                                       }
                                   }
                               }
@@ -264,7 +294,7 @@ var decorate = function() {
                       }
                   }
                   // attach the modal button
-                  j.innerHTML +='<div class="modal_info">i</div>';
+                  cont.innerHTML +='<span class="modal_info"></span>';
               }
             }
         }
@@ -304,7 +334,8 @@ function handleModal() {
           //code for handling the test info
           //console.log(i);
           modal.style.display = "block";
-          var data = JSON.parse(i.path[1].dataset.result);
+          console.log(i.path);
+          var data = JSON.parse(i.path[2].dataset.result);
           console.log(data);
           //modal.getElementsByClassName('modal-header')[0].innerText = data.name;
           modal.querySelector('.modal-header h2').innerText = data.name + " build: " + data.buildNumber;
