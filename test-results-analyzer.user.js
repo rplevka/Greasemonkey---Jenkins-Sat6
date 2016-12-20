@@ -2,7 +2,7 @@
 // @name        jenkins_test_results_analyzer_redesign
 // @namespace   jenkins-ci
 // @include     https://*jenkins*.redhat.com/*/test_results_analyzer/
-// @version     1.2
+// @version     1.2.1
 // @grant       none
 // @updateurl   https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/master/test-results-analyzer.meta.js
 // @downloadurl https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/master/test-results-analyzer.user.js
@@ -40,7 +40,6 @@ var decorate = function() {
   var styles = document.getElementsByTagName('STYLE');
 
   var style = `
-
   .failed{
     background-color: #d9534f;
     color: #fff;
@@ -108,13 +107,10 @@ var decorate = function() {
     background-repeat: no-repeat;
     background-position: bottom right;
     display: inline-block;
-
     width: 13px;
     height: 13px;
     content:"";
   }
-
-
 /* MODAL STYLES */
 .modal {
       display: none; /* Hidden by default */
@@ -132,23 +128,19 @@ var decorate = function() {
       animation-name: fadeIn;
       animation-duration: 0.4s
   }
-
   .modal_info{
       visibility: hidden;
   }
-
   .modal_info::after{
     background-image: url("http://www.iconsdb.com/icons/preview/black/info-2-xxl.png");
     background-size: 13px 13px;
     background-repeat: no-repeat;
     background-position: bottom right;
     display: inline-block;
-
     width: 13px;
     height: 13px;
     content:"";
   }
-
   /* Modal Content */
   .modal-content {
       position: fixed;
@@ -161,7 +153,6 @@ var decorate = function() {
       animation-name: slideIn;
       animation-duration: 0.4s;
   }
-
   /* The Close Button */
   .close {
       color: white;
@@ -169,20 +160,17 @@ var decorate = function() {
       font-size: 28px;
       font-weight: bold;
   }
-
   .close:hover,
   .close:focus {
       color: #000;
       text-decoration: none;
       cursor: pointer;
   }
-
   .modal-header {
       padding: 2px 16px;
       background-color: #c02942;
       color: white;
   }
-
   .modal-body {
       padding: 2px 16px;
       overflow: scroll;
@@ -190,29 +178,24 @@ var decorate = function() {
       background-color: #000;
       color: #fefefe;
   }
-
   .modal-footer {
       padding: 2px 16px;
       background-color: #c02942;
       color: white;
   }
-
   /* Add Animation */
   @-webkit-keyframes slideIn {
       from {bottom: -300px; opacity: 0}
       to {bottom: 0; opacity: 1}
   }
-
   @keyframes slideIn {
       from {bottom: -300px; opacity: 0}
       to {bottom: 0; opacity: 1}
   }
-
   @-webkit-keyframes fadeIn {
       from {opacity: 0}
       to {opacity: 1}
   }
-
   @keyframes fadeIn {
       from {opacity: 0}
       to {opacity: 1}
@@ -238,7 +221,7 @@ var decorate = function() {
                   // TBD: we might mitigate this by utilizing jenkins XML api which accepts xpath-like filtering, which happens on the server.
                   function(buildinfo){
                       build.cases = [];
-                      for(c of buildinfo.suites[0].cases){
+                      for(var c of buildinfo.suites[0].cases){
                           if(c.status != "PASSED" && c.status != "SKIPPED"){
                               build.cases.push(c);
                           }
@@ -264,15 +247,13 @@ var decorate = function() {
                   j.innerHTML += '<div class="icon_container"></div>';
                   cont = j.getElementsByClassName("icon_container")[0];
                   j.onmouseenter = function(el){
-                      console.log(el.srcElement.tagName);
-                      if(el.srcElement.tagName == "DIV" || el.srcElement.tagName == "SPAN"){
-                          el.srcElement.getElementsByClassName("modal_info")[0].style.visibility = "visible";
+                      if(el.target.tagName == "DIV" || el.target.tagName == "SPAN"){
+                          el.target.getElementsByClassName("modal_info")[0].style.visibility = "visible";
                       }
                   };
                   j.onmouseleave = function(el){
-                      console.log(el.srcElement);
-                      if(el.srcElement.tagName == "DIV" || el.srcElement.tagName == "SPAN"){
-                          el.srcElement.getElementsByClassName("modal_info")[0].style.visibility = "hidden";
+                      if(el.target.tagName == "DIV" || el.target.tagName == "SPAN"){
+                          el.target.getElementsByClassName("modal_info")[0].style.visibility = "hidden";
                       }
                   };
                   var dataResult = JSON.parse(j.getAttribute('data-result'));
@@ -334,11 +315,17 @@ function handleModal() {
   for (var btn of btns){
       btn.onclick = function(i) {
           //code for handling the test info
-          //console.log(i);
           modal.style.display = "block";
-          console.log(i.path);
-          var data = JSON.parse(i.path[2].dataset.result);
-          console.log(data);
+          var data = '';
+          if (typeof(i.path) !== 'undefined'){
+              // for chrome
+              data = JSON.parse(i.path[2].dataset.result);
+          }
+          else{
+              //for Firefox
+              data = JSON.parse(i.target.parentElement.parentElement.dataset.result);
+          }
+
           //modal.getElementsByClassName('modal-header')[0].innerText = data.name;
           modal.querySelector('.modal-header h2').innerText = data.name + " build: " + data.buildNumber;
           modal.getElementsByClassName('modal-body')[0].innerText = data.failureMessage;
@@ -354,7 +341,6 @@ function handleModal() {
         modal.style.display = "none";
     }
   };
-  console.log('handleModal() initialized');
 }
 
 function httpGet(url, callback) {
