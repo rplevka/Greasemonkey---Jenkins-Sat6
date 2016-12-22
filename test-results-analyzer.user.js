@@ -2,7 +2,7 @@
 // @name        jenkins_test_results_analyzer_redesign
 // @namespace   jenkins-ci
 // @include     https://*jenkins*.redhat.com/*/test_results_analyzer/
-// @version     1.2.1
+// @version     1.2.2
 // @grant       none
 // @updateurl   https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/master/test-results-analyzer.meta.js
 // @downloadurl https://raw.githubusercontent.com/rplevka/Greasemonkey---Jenkins-Sat6/master/test-results-analyzer.user.js
@@ -41,22 +41,22 @@ var decorate = function() {
 
   var style = `
   .failed{
-    background-color: #d9534f;
+    background-color: #d9534f !important;
     color: #fff;
     border-radius: .25em;
   }
   .passed{
-    background-color: #5cb85c;
+    background-color: #5cb85c !important;
     color: #fff;
     border-radius: .25em;
   }
   .skipped{
-    background-color: #f0ad4e;
+    background-color: #f0ad4e !important;
     color: #fff;
     border-radius: .25em;
   }
   .no_status{
-    background-color: #aaa;
+    background-color: #aaa !important;
     color: #fff;
     border-radius: .25em;
   }
